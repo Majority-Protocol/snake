@@ -1,0 +1,31 @@
+{
+  "name": "@anthropic-internal/snake",
+  "version": "1.0.0",
+  "description": "Snake Rounds game for Majority apps",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "snake",
+    "game",
+    "majority"
+  ],
+  "author": "Majority Protocol",
+  "license": "MIT",
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Majority-Protocol/snake.git"
+  }
+}

@@ -1,3 +1,4 @@
+export const snakeGameHtml = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -30,7 +31,7 @@
             left: 0;
             right: 0;
             padding: 8px 16px;
-            padding-top: 12px;
+            padding-top: 55px;
             background: rgba(0,0,0,0.8);
             z-index: 10;
         }
@@ -47,6 +48,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            margin-left: 45px;
         }
         .header-right {
             display: flex;
@@ -143,9 +145,9 @@
             font-size: 14px;
             flex-shrink: 0;
         }
-        .icon-apple { background: linear-gradient(135deg, #ff6b6b, #ee5253); border-radius: 50%; }
-        .icon-speed { background: linear-gradient(135deg, #cc33ff, #9900cc); border-radius: 50%; }
-        .icon-ultra { background: linear-gradient(135deg, #00ffff, #0099ff); border-radius: 50%; }
+        .icon-coconut { background: #8B4513; border-radius: 50%; }
+        .icon-speed { background: linear-gradient(135deg, #2ecc71, #27ae60); border-radius: 50%; }
+        .icon-ultra { background: linear-gradient(135deg, #3498db, #2980b9); border-radius: 50%; }
         .icon-ice { background: linear-gradient(135deg, #74b9ff, #0984e3); }
         .icon-coin { background: linear-gradient(135deg, #f1c40f, #f39c12); border-radius: 50%; }
         .icon-barrier { background: linear-gradient(135deg, #e74c3c, #c0392b); }
@@ -220,8 +222,8 @@
     <div id="howToPlay">
         <h2>🐍 Snake Rounds</h2>
         <div class="instructions">
-            <div class="instruction-item"><span class="instruction-icon icon-apple">🍎</span> Red Apple = Grow</div>
-            <div class="instruction-item"><span class="instruction-icon icon-speed">⚡</span> Purple = Speed boost</div>
+            <div class="instruction-item"><span class="instruction-icon icon-coconut">🥥</span> Brown = Grow (normal)</div>
+            <div class="instruction-item"><span class="instruction-icon icon-speed">⚡</span> Green = Speed boost</div>
             <div class="instruction-item"><span class="instruction-icon icon-ultra">💎</span> Blue = EXTREME speed</div>
             <div class="instruction-item"><span class="instruction-icon icon-ice">❄️</span> Ice = Slow down</div>
             <div class="instruction-item"><span class="instruction-icon icon-coin">💰</span> Coins = 50 for extra life</div>
@@ -251,8 +253,8 @@
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             GRID = Math.floor(Math.min(canvas.width, canvas.height) / 20);
-            TOP_OFFSET = Math.ceil(90 / GRID);
-            BOTTOM_OFFSET = Math.ceil(20 / GRID);
+            TOP_OFFSET = Math.ceil(130 / GRID);
+            BOTTOM_OFFSET = Math.ceil(40 / GRID);
             COLS = Math.floor(canvas.width / GRID);
             ROWS = Math.floor(canvas.height / GRID) - TOP_OFFSET - BOTTOM_OFFSET;
             if (snake && snake.length > 0) draw();
@@ -479,13 +481,14 @@
             ctx.strokeStyle = 'rgba(255,255,255,0.3)';
             ctx.lineWidth = 2;
             ctx.strokeRect(gameAreaX + 1, gameAreaY + 1, gameAreaW - 2, gameAreaH - 2);
+            // Glowing edge effect
             ctx.shadowColor = '#00ffff';
             ctx.shadowBlur = 10;
             ctx.strokeStyle = 'rgba(0,255,255,0.2)';
             ctx.strokeRect(gameAreaX + 1, gameAreaY + 1, gameAreaW - 2, gameAreaH - 2);
             ctx.shadowBlur = 0;
 
-            // Barriers
+            // Barriers - glowing red crystals
             barriers.forEach(function(b) {
                 var bx = b.x * GRID + GRID/2;
                 var by = yOffset + b.y * GRID + GRID/2;
@@ -506,7 +509,7 @@
                 ctx.shadowBlur = 0;
             });
 
-            // Snake
+            // Snake body with gradient and glow
             for (var i = snake.length - 1; i >= 0; i--) {
                 var seg = snake[i];
                 var segX = seg.x * GRID + GRID/2;
@@ -514,6 +517,7 @@
                 var progress = i / snake.length;
                 var radius = GRID/2 - 1 - (progress * 3);
 
+                // Body gradient - cyan to purple
                 var snakeGrad = ctx.createRadialGradient(segX - 2, segY - 2, 0, segX, segY, radius);
                 if (i === 0) {
                     snakeGrad.addColorStop(0, '#00ff88');
@@ -535,6 +539,7 @@
                 ctx.arc(segX, segY, radius, 0, Math.PI * 2);
                 ctx.fill();
 
+                // Shine effect
                 if (i < snake.length / 3) {
                     ctx.fillStyle = 'rgba(255,255,255,0.3)';
                     ctx.beginPath();
@@ -543,6 +548,7 @@
                 }
                 ctx.shadowBlur = 0;
 
+                // Snake head details
                 if (i === 0) {
                     var eyeOff = GRID / 4;
                     var eyeX1 = segX - eyeOff + direction.x * 4;
@@ -555,11 +561,13 @@
                         eyeY1 = segY + direction.y * 3;
                         eyeY2 = segY + direction.y * 3;
                     }
+                    // Eye whites
                     ctx.fillStyle = '#fff';
                     ctx.beginPath();
                     ctx.arc(eyeX1, eyeY1, 5, 0, Math.PI * 2);
                     ctx.arc(eyeX2, eyeY2, 5, 0, Math.PI * 2);
                     ctx.fill();
+                    // Pupils
                     ctx.fillStyle = '#000';
                     ctx.beginPath();
                     ctx.arc(eyeX1 + direction.x, eyeY1 + direction.y, 2.5, 0, Math.PI * 2);
@@ -568,12 +576,13 @@
                 }
             }
 
-            // Food
+            // Food - different styles based on type
             var fx = food.x * GRID + GRID/2;
             var fy = yOffset + food.y * GRID + GRID/2;
             var fr = GRID/2 - 2 + pulse * 2;
 
             if (foodType === 'ultra') {
+                // Diamond/crystal effect
                 var ultraGrad = ctx.createRadialGradient(fx, fy, 0, fx, fy, fr);
                 ultraGrad.addColorStop(0, '#00ffff');
                 ultraGrad.addColorStop(0.5, '#0099ff');
@@ -588,6 +597,7 @@
                 ctx.lineTo(fx - fr, fy);
                 ctx.closePath();
                 ctx.fill();
+                // Inner shine
                 ctx.fillStyle = 'rgba(255,255,255,0.5)';
                 ctx.beginPath();
                 ctx.moveTo(fx, fy - fr/2);
@@ -597,6 +607,7 @@
                 ctx.closePath();
                 ctx.fill();
             } else if (foodType === 'speed') {
+                // Purple energy orb
                 var speedGrad = ctx.createRadialGradient(fx, fy, 0, fx, fy, fr);
                 speedGrad.addColorStop(0, '#ff66ff');
                 speedGrad.addColorStop(0.5, '#cc33ff');
@@ -607,12 +618,14 @@
                 ctx.beginPath();
                 ctx.arc(fx, fy, fr, 0, Math.PI * 2);
                 ctx.fill();
+                // Lightning symbol
                 ctx.fillStyle = '#fff';
                 ctx.font = 'bold ' + (GRID * 0.6) + 'px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText('⚡', fx, fy);
             } else {
+                // Apple/fruit style
                 var foodGrad = ctx.createRadialGradient(fx - 3, fy - 3, 0, fx, fy, fr);
                 foodGrad.addColorStop(0, '#ff6b6b');
                 foodGrad.addColorStop(0.7, '#ee5253');
@@ -623,16 +636,18 @@
                 ctx.beginPath();
                 ctx.arc(fx, fy, fr, 0, Math.PI * 2);
                 ctx.fill();
+                // Shine
                 ctx.fillStyle = 'rgba(255,255,255,0.4)';
                 ctx.beginPath();
                 ctx.arc(fx - fr/3, fy - fr/3, fr/3, 0, Math.PI * 2);
                 ctx.fill();
+                // Stem
                 ctx.fillStyle = '#27ae60';
                 ctx.fillRect(fx - 2, fy - fr - 4, 4, 6);
             }
             ctx.shadowBlur = 0;
 
-            // Ice power-up
+            // Ice power-up - snowflake crystal
             if (icePowerUp) {
                 var ix = icePowerUp.x * GRID + GRID/2;
                 var iy = yOffset + icePowerUp.y * GRID + GRID/2;
@@ -644,6 +659,7 @@
                 ctx.fillStyle = iceGrad;
                 ctx.shadowColor = '#74b9ff';
                 ctx.shadowBlur = 15 + pulse * 5;
+                // Hexagon shape
                 ctx.beginPath();
                 for (var hi = 0; hi < 6; hi++) {
                     var angle = (hi * Math.PI / 3) - Math.PI / 2;
@@ -662,7 +678,7 @@
                 ctx.shadowBlur = 0;
             }
 
-            // Falling coins
+            // Falling coins - spinning gold coins
             fallingCoins.forEach(function(coin) {
                 var coinX = coin.x * GRID + GRID/2;
                 var coinY = yOffset + coin.fallProgress * GRID + GRID/2;
@@ -815,3 +831,4 @@
     </script>
 </body>
 </html>
+`;
