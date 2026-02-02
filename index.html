@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Snake Rounds</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #fff6c5;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #2d3436;
+        }
+        #canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        #header {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            z-index: 10;
+        }
+        #header span {
+            background: rgba(255, 255, 255, 0.85);
+            padding: 10px 18px;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 2px solid rgba(0,0,0,0.08);
+        }
+        #round { color: #d35400; }
+        #length { color: #27ae60; }
+        #target { color: #c0392b; }
+        #speed { color: #2980b9; }
+        #coins { color: #b8860b; }
+        #lives { color: #e91e63; }
+        #timer { color: #e74c3c; }
+        #message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px 60px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            z-index: 20;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            border: 2px solid rgba(0,0,0,0.08);
+        }
+        #message h2 { margin-bottom: 20px; font-size: 36px; color: #2d3436; }
+        #message p { margin-bottom: 25px; color: #636e72; font-size: 18px; }
+        #message button {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            border: none;
+            color: #fff;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+        }
+        #message button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
+        }
+        #controls {
+            position: fixed;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #8b7355;
+            font-size: 13px;
+            font-weight: 500;
+            z-index: 10;
+        }
+        #howToPlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px 50px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 30;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            border: 2px solid rgba(0,0,0,0.08);
+            max-width: 500px;
+            display: none;
+        }
+        #howToPlay h2 {
+            margin-bottom: 20px;
+            font-size: 32px;
+            color: #2d3436;
+        }
+        #howToPlay .instructions {
+            text-align: left;
+            margin-bottom: 25px;
+        }
+        #howToPlay .instructions p {
+            margin: 12px 0;
+            color: #555;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        #howToPlay .instructions strong {
+            color: #2d3436;
+        }
+        #howToPlay .icon {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        #howToPlay .icon.brown { background: #8B4513; }
+        #howToPlay .icon.green { background: #32CD32; }
+        #howToPlay .icon.blue { background: #1E90FF; }
+        #howToPlay .icon.ice { background: rgba(135, 206, 250, 0.9); border: 2px solid #4169E1; box-shadow: none; }
+        #howToPlay .icon.coin { background: #FFD700; }
+        #howToPlay .icon.barrier { background: #e74c3c; border-radius: 4px; }
+        #howToPlay button {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            border: none;
+            color: #fff;
+            padding: 15px 50px;
+            font-size: 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+        }
+        #howToPlay button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <span id="round">Round: 1</span>
+        <span id="length">Length: 3</span>
+        <span id="target">Target: 6</span>
+        <span id="speed">Speed: Normal</span>
+        <span id="coins">Coins: 0/50</span>
+        <span id="lives">Lives: 0</span>
+        <span id="timer">Time: 60s</span>
+    </div>
+    <canvas id="canvas"></canvas>
+    <div id="controls">Arrow Keys or WASD | Collect coconuts before time runs out! | 50 coins = 1 extra life</div>
+    <div id="message">
+        <h2 id="msg-title">Round Complete!</h2>
+        <p id="msg-text">Get ready for the next round</p>
+        <button id="msg-btn" onclick="nextAction()">Continue</button>
+    </div>
+    <div id="howToPlay">
+        <h2>How to Play</h2>
+        <div class="instructions">
+            <p><strong>Controls:</strong> Arrow Keys or WASD to move</p>
+            <p><span class="icon brown"></span> <strong>Brown Coconut:</strong> Eat to grow (no speed change)</p>
+            <p><span class="icon green"></span> <strong>Green Coconut:</strong> Speeds you up!</p>
+            <p><span class="icon blue"></span> <strong>Blue Coconut:</strong> EXTREME speed boost!</p>
+            <p><span class="icon ice"></span> <strong>Ice Cube:</strong> Slows you down</p>
+            <p><span class="icon coin"></span> <strong>Gold Coins:</strong> Collect 50 for an extra life</p>
+            <p><span class="icon barrier"></span> <strong>Red Barriers:</strong> Avoid these! (appear in round 2+)</p>
+            <p><strong>Goal:</strong> Reach the target length before time runs out!</p>
+        </div>
+        <button onclick="startGame()">Start Game</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let GRID, COLS, ROWS, TOP_OFFSET, BOTTOM_OFFSET;
+        let snake, direction, nextDirection, directionQueue, food, barriers;
+        let round, targetLength, gameOver, roundComplete, gameLoop;
+        let gameSpeed, baseSpeed, coconutType, slowPowerUp; // coconutType: 'normal', 'spicy', 'ultra'
+        let coins, lives, fallingCoins, coinSpawnTimer;
+        let roundTimer, roundTimeLimit, timerInterval;
+        let gameStarted = false;
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            GRID = Math.floor(Math.min(canvas.width, canvas.height) / 25);
+            // Reserve space for header (top) and controls (bottom)
+            TOP_OFFSET = Math.ceil(90 / GRID); // ~90px for header
+            BOTTOM_OFFSET = Math.ceil(30 / GRID); // ~30px for controls
+            COLS = Math.floor(canvas.width / GRID);
+            ROWS = Math.floor(canvas.height / GRID) - TOP_OFFSET - BOTTOM_OFFSET;
+            if (snake && snake.length > 0) draw();
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        function init() {
+            // Show how to play popup
+            document.getElementById('howToPlay').style.display = 'block';
+        }
+
+        function startGame() {
+            document.getElementById('howToPlay').style.display = 'none';
+            gameStarted = true;
+            round = 1;
+            coins = 0;
+            lives = 0;
+            fallingCoins = [];
+            startRound();
+        }
+
+        function startRound() {
+            const startLength = round === 1 ? 3 : snake.length;
+            snake = [];
+            const startX = Math.floor(COLS / 2);
+            const startY = Math.floor(ROWS / 2);
+            for (let i = 0; i < startLength; i++) {
+                snake.push({ x: startX - i, y: startY });
+            }
+            direction = { x: 1, y: 0 };
+            nextDirection = { x: 1, y: 0 };
+            directionQueue = [];
+            // Target scales faster: +5 base, +3 per round
+            targetLength = startLength + 5 + (round * 3);
+            barriers = generateBarriers();
+            gameOver = false;
+            roundComplete = false;
+            baseSpeed = 100;
+            gameSpeed = baseSpeed;
+            slowPowerUp = null;
+
+            // Set time limit: 60 seconds for round 1, decreases slightly each round (min 30s)
+            roundTimeLimit = Math.max(30, 60 - (round - 1) * 5);
+            roundTimer = roundTimeLimit;
+            startTimer();
+
+            placeFood();
+            updateUI();
+            startGameLoop();
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (gameOver || roundComplete) return;
+                roundTimer--;
+                updateUI();
+                if (roundTimer <= 0) {
+                    timeUp();
+                }
+            }, 1000);
+        }
+
+        function timeUp() {
+            if (lives > 0) {
+                lives--;
+                roundTimer = roundTimeLimit;
+                updateUI();
+                return;
+            }
+            gameOver = true;
+            clearInterval(gameLoop);
+            clearInterval(timerInterval);
+            showMessage('Time\'s Up!', 'You ran out of time on Round ' + round, 'Play Again');
+        }
+
+        function startGameLoop() {
+            if (gameLoop) clearInterval(gameLoop);
+            gameLoop = setInterval(update, gameSpeed);
+        }
+
+        function changeSpeed(newSpeed) {
+            gameSpeed = Math.max(40, Math.min(150, newSpeed));
+            startGameLoop();
+            updateUI();
+        }
+
+        function spawnCoin() {
+            fallingCoins.push({
+                x: Math.floor(Math.random() * COLS),
+                y: 0,
+                fallProgress: 0
+            });
+        }
+
+        function updateCoins() {
+            // Spawn new coins randomly (reduced rate)
+            if (Math.random() < 0.025) {
+                spawnCoin();
+            }
+
+            // Update falling coins (faster fall speed)
+            fallingCoins.forEach(coin => {
+                coin.fallProgress += 0.25;
+            });
+
+            // Remove coins that fell off screen
+            fallingCoins = fallingCoins.filter(coin => coin.fallProgress < ROWS);
+
+            // Check collision with snake head only for immediate response
+            const head = snake[0];
+            const newFallingCoins = [];
+            for (let coin of fallingCoins) {
+                const coinGridY = Math.floor(coin.fallProgress);
+                // Also check partial overlap for smoother collection
+                const coinTopY = Math.floor(coin.fallProgress - 0.5);
+                const coinBottomY = Math.floor(coin.fallProgress + 0.5);
+
+                let collected = false;
+                if (coin.x === head.x && (coinGridY === head.y || coinTopY === head.y || coinBottomY === head.y)) {
+                    collected = true;
+                }
+
+                if (collected) {
+                    coins++;
+                    if (coins >= 50) {
+                        coins -= 50;
+                        lives++;
+                    }
+                    updateUI();
+                } else {
+                    newFallingCoins.push(coin);
+                }
+            }
+            fallingCoins = newFallingCoins;
+        }
+
+        function generateBarriers() {
+            const b = [];
+            if (round < 2) return b;
+
+            // More barriers, scaling faster: round 2 = 3, round 3 = 5, round 4 = 7, etc. (max 15)
+            const numBarriers = Math.min(1 + round * 2, 15);
+            // Barriers get longer as rounds progress
+            const minLength = 3 + Math.floor(round / 2);
+            const maxLength = 6 + round;
+
+            const snakeStartX = Math.floor(COLS / 2);
+            const snakeStartY = Math.floor(ROWS / 2);
+
+            for (let i = 0; i < numBarriers; i++) {
+                const isHorizontal = Math.random() > 0.5;
+                const length = minLength + Math.floor(Math.random() * (maxLength - minLength));
+                const startX = Math.floor(Math.random() * (COLS - length - 6)) + 3;
+                const startY = Math.floor(Math.random() * (ROWS - length - 6)) + 3;
+
+                for (let j = 0; j < length; j++) {
+                    const bx = isHorizontal ? startX + j : startX;
+                    const by = isHorizontal ? startY : startY + j;
+                    if (!isInSafeZone(bx, by, snakeStartX, snakeStartY)) {
+                        b.push({ x: bx, y: by });
+                    }
+                }
+            }
+            return b;
+        }
+
+        function isInSafeZone(x, y, snakeX, snakeY) {
+            // Safe zone behind and around snake (where body spawns)
+            if (x >= snakeX - 5 && x <= snakeX && Math.abs(y - snakeY) <= 2) {
+                return true;
+            }
+            // Safe zone in front of snake (8 blocks ahead for reaction time)
+            if (x >= snakeX && x <= snakeX + 8 && Math.abs(y - snakeY) <= 2) {
+                return true;
+            }
+            return false;
+        }
+
+        function placeFood() {
+            let valid = false;
+            let attempts = 0;
+            while (!valid && attempts < 1000) {
+                food = {
+                    x: Math.floor(Math.random() * COLS),
+                    y: Math.floor(Math.random() * ROWS)
+                };
+                valid = !snake.some(s => s.x === food.x && s.y === food.y) &&
+                        !barriers.some(b => b.x === food.x && b.y === food.y) &&
+                        !(slowPowerUp && food.x === slowPowerUp.x && food.y === slowPowerUp.y);
+                attempts++;
+            }
+            // Coconut type: 55% normal, 30% spicy (red), 15% ultra (blue)
+            const roll = Math.random();
+            if (roll < 0.15) {
+                coconutType = 'ultra'; // Blue - extreme speed
+            } else if (roll < 0.45) {
+                coconutType = 'spicy'; // Red - fast
+            } else {
+                coconutType = 'normal'; // Brown - normal
+            }
+
+            // Maybe spawn a slow power-up
+            maybeSpawnSlowPowerUp();
+        }
+
+        function maybeSpawnSlowPowerUp() {
+            // 25% chance to spawn slow power-up if one doesn't exist
+            if (!slowPowerUp && Math.random() < 0.25) {
+                let valid = false;
+                let attempts = 0;
+                while (!valid && attempts < 1000) {
+                    slowPowerUp = {
+                        x: Math.floor(Math.random() * COLS),
+                        y: Math.floor(Math.random() * ROWS)
+                    };
+                    valid = !snake.some(s => s.x === slowPowerUp.x && s.y === slowPowerUp.y) &&
+                            !barriers.some(b => b.x === slowPowerUp.x && b.y === slowPowerUp.y) &&
+                            !(food.x === slowPowerUp.x && food.y === slowPowerUp.y);
+                    attempts++;
+                }
+            }
+        }
+
+        function update() {
+            if (gameOver || roundComplete) return;
+
+            // Update falling coins
+            updateCoins();
+
+            // Process direction queue for responsive controls
+            if (directionQueue.length > 0) {
+                nextDirection = directionQueue.shift();
+            }
+            direction = nextDirection;
+            const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+
+            if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
+                endGame();
+                return;
+            }
+
+            if (snake.some(s => s.x === head.x && s.y === head.y)) {
+                endGame();
+                return;
+            }
+
+            if (barriers.some(b => b.x === head.x && b.y === head.y)) {
+                endGame();
+                return;
+            }
+
+            snake.unshift(head);
+
+            // Check for slow power-up collection
+            if (slowPowerUp && head.x === slowPowerUp.x && head.y === slowPowerUp.y) {
+                changeSpeed(gameSpeed + 20); // Slower (higher interval)
+                slowPowerUp = null;
+            }
+
+            if (head.x === food.x && head.y === food.y) {
+                // Speed changes based on coconut type
+                if (coconutType === 'ultra') {
+                    changeSpeed(gameSpeed - 35); // Much faster (blue coconut)
+                } else if (coconutType === 'spicy') {
+                    changeSpeed(gameSpeed - 20); // Faster (red coconut)
+                }
+                placeFood();
+                if (snake.length >= targetLength) {
+                    completeRound();
+                }
+            } else {
+                snake.pop();
+            }
+
+            updateUI();
+            draw();
+        }
+
+        function draw() {
+            const yOffset = TOP_OFFSET * GRID;
+
+            ctx.fillStyle = '#fff6c5';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw playable area border
+            ctx.strokeStyle = 'rgba(139, 115, 85, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(0, yOffset, COLS * GRID, ROWS * GRID);
+
+
+            barriers.forEach(b => {
+                ctx.fillStyle = '#e74c3c';
+                ctx.fillRect(b.x * GRID + 2, yOffset + b.y * GRID + 2, GRID - 4, GRID - 4);
+                ctx.fillStyle = '#c0392b';
+                ctx.fillRect(b.x * GRID + 5, yOffset + b.y * GRID + 5, GRID - 10, GRID - 10);
+            });
+
+            snake.forEach((segment, index) => {
+                const segY = yOffset + segment.y * GRID;
+                const gradient = ctx.createRadialGradient(
+                    segment.x * GRID + GRID/2, segY + GRID/2, 0,
+                    segment.x * GRID + GRID/2, segY + GRID/2, GRID/2
+                );
+                if (index === 0) {
+                    gradient.addColorStop(0, '#2ecc71');
+                    gradient.addColorStop(1, '#27ae60');
+                } else {
+                    const fade = 1 - (index / snake.length) * 0.5;
+                    gradient.addColorStop(0, `rgba(46, 204, 113, ${fade})`);
+                    gradient.addColorStop(1, `rgba(39, 174, 96, ${fade})`);
+                }
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.roundRect(segment.x * GRID + 2, segY + 2, GRID - 4, GRID - 4, 6);
+                ctx.fill();
+
+                if (index === 0) {
+                    ctx.fillStyle = '#fff';
+                    const eyeSize = GRID / 6;
+                    const eyeOff = GRID / 4;
+                    const eyeOffsetX = direction.x * (GRID / 6);
+                    const eyeOffsetY = direction.y * (GRID / 6);
+                    ctx.beginPath();
+                    ctx.arc(segment.x * GRID + eyeOff + eyeOffsetX, segY + GRID/2 + eyeOffsetY, eyeSize, 0, Math.PI * 2);
+                    ctx.arc(segment.x * GRID + GRID - eyeOff + eyeOffsetX, segY + GRID/2 + eyeOffsetY, eyeSize, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.arc(segment.x * GRID + eyeOff + eyeOffsetX + direction.x * 2, segY + GRID/2 + eyeOffsetY + direction.y * 2, eyeSize/2, 0, Math.PI * 2);
+                    ctx.arc(segment.x * GRID + GRID - eyeOff + eyeOffsetX + direction.x * 2, segY + GRID/2 + eyeOffsetY + direction.y * 2, eyeSize/2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            // Coconut
+            const cx = food.x * GRID + GRID/2;
+            const cy = yOffset + food.y * GRID + GRID/2;
+            const r = GRID/2 - 3;
+
+            // Main coconut body color based on type
+            let coconutColor, shadowColor, dotColor;
+            if (coconutType === 'ultra') {
+                coconutColor = '#1E90FF'; // Blue
+                shadowColor = '#0066CC';
+                dotColor = '#00BFFF';
+            } else if (coconutType === 'spicy') {
+                coconutColor = '#32CD32'; // Green
+                shadowColor = '#228B22';
+                dotColor = '#006400';
+            } else {
+                coconutColor = '#8B4513'; // Brown
+                shadowColor = '#5D3A1A';
+                dotColor = '#3E2723';
+            }
+
+            ctx.fillStyle = coconutColor;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Darker edge/shadow
+            ctx.strokeStyle = shadowColor;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r - 1, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Coconut "eyes" (the three dots)
+            ctx.fillStyle = dotColor;
+            const eyeR = r / 4;
+            ctx.beginPath();
+            ctx.arc(cx, cy - r/3, eyeR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(cx - r/3, cy + r/4, eyeR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(cx + r/3, cy + r/4, eyeR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Special effects based on type
+            if (coconutType === 'ultra') {
+                // Electric/lightning effect for blue coconut
+                ctx.strokeStyle = '#00FFFF';
+                ctx.lineWidth = 2;
+                // Lightning bolts
+                ctx.beginPath();
+                ctx.moveTo(cx - r/2, cy - r - 2);
+                ctx.lineTo(cx - r/4, cy - r - 8);
+                ctx.lineTo(cx - r/3, cy - r - 5);
+                ctx.lineTo(cx - r/6, cy - r - 12);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(cx + r/2, cy - r - 2);
+                ctx.lineTo(cx + r/4, cy - r - 10);
+                ctx.lineTo(cx + r/3, cy - r - 6);
+                ctx.lineTo(cx + r/6, cy - r - 14);
+                ctx.stroke();
+                // Glow effect
+                ctx.fillStyle = 'rgba(30, 144, 255, 0.3)';
+                ctx.beginPath();
+                ctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (coconutType === 'spicy') {
+                // Simple highlight for green coconut
+                ctx.fillStyle = 'rgba(255,255,255,0.25)';
+                ctx.beginPath();
+                ctx.arc(cx - r/3, cy - r/3, r/4, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                ctx.beginPath();
+                ctx.arc(cx - r/3, cy - r/3, r/4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw slow power-up (ice cube)
+            if (slowPowerUp) {
+                const sx = slowPowerUp.x * GRID + GRID/2;
+                const sy = yOffset + slowPowerUp.y * GRID + GRID/2;
+                const sr = GRID/2 - 2;
+
+                // Ice cube body
+                ctx.fillStyle = 'rgba(135, 206, 250, 0.8)';
+                ctx.beginPath();
+                ctx.roundRect(slowPowerUp.x * GRID + 3, yOffset + slowPowerUp.y * GRID + 3, GRID - 6, GRID - 6, 4);
+                ctx.fill();
+
+                // Ice cube shine
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.beginPath();
+                ctx.roundRect(slowPowerUp.x * GRID + 5, yOffset + slowPowerUp.y * GRID + 5, GRID/3, GRID/3, 2);
+                ctx.fill();
+
+                // Ice cube outline
+                ctx.strokeStyle = '#4169E1';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(slowPowerUp.x * GRID + 3, yOffset + slowPowerUp.y * GRID + 3, GRID - 6, GRID - 6, 4);
+                ctx.stroke();
+
+                // Snowflake symbol
+                ctx.fillStyle = '#fff';
+                ctx.font = `${GRID/2}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('*', sx, sy + 2);
+            }
+
+            // Draw falling coins (smooth animation)
+            fallingCoins.forEach(coin => {
+                const coinX = coin.x * GRID + GRID/2;
+                const coinY = yOffset + coin.fallProgress * GRID + GRID/2;
+                const coinR = GRID/2 - 2;
+
+                // Coin glow (pulsing)
+                const pulse = Math.sin(Date.now() / 100) * 0.15 + 0.5;
+                ctx.fillStyle = `rgba(255, 215, 0, ${pulse})`;
+                ctx.beginPath();
+                ctx.arc(coinX, coinY, coinR + 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Coin body
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(coinX, coinY, coinR, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Coin shine
+                ctx.fillStyle = '#FFFACD';
+                ctx.beginPath();
+                ctx.arc(coinX - coinR/3, coinY - coinR/3, coinR/3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Coin edge
+                ctx.strokeStyle = '#DAA520';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(coinX, coinY, coinR - 1, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Dollar sign
+                ctx.fillStyle = '#B8860B';
+                ctx.font = `bold ${GRID/2.5}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('$', coinX, coinY + 1);
+            });
+        }
+
+        function updateUI() {
+            document.getElementById('round').textContent = `Round: ${round}`;
+            document.getElementById('length').textContent = `Length: ${snake.length}`;
+            document.getElementById('target').textContent = `Target: ${targetLength}`;
+            document.getElementById('coins').textContent = `Coins: ${coins}/50`;
+            document.getElementById('lives').textContent = `Lives: ${lives}`;
+
+            const timerEl = document.getElementById('timer');
+            timerEl.textContent = `Time: ${roundTimer}s`;
+            timerEl.style.color = roundTimer <= 10 ? '#c0392b' : roundTimer <= 20 ? '#e74c3c' : '#27ae60';
+
+            let speedLabel = 'Normal';
+            if (gameSpeed <= 60) speedLabel = 'INSANE';
+            else if (gameSpeed <= 70) speedLabel = 'Very Fast';
+            else if (gameSpeed <= 85) speedLabel = 'Fast';
+            else if (gameSpeed >= 130) speedLabel = 'Slow';
+            else if (gameSpeed >= 115) speedLabel = 'Relaxed';
+
+            const speedEl = document.getElementById('speed');
+            speedEl.textContent = `Speed: ${speedLabel}`;
+            speedEl.style.color = gameSpeed <= 70 ? '#c0392b' : gameSpeed >= 115 ? '#2980b9' : '#27ae60';
+        }
+
+        function completeRound() {
+            roundComplete = true;
+            clearInterval(gameLoop);
+            clearInterval(timerInterval);
+            showMessage('Round ' + round + ' Complete!', 'Your snake is now ' + snake.length + ' long. More coconuts and barriers await!', 'Next Round');
+        }
+
+        function endGame() {
+            if (lives > 0) {
+                // Use a life and respawn
+                lives--;
+                respawn();
+                return;
+            }
+            gameOver = true;
+            clearInterval(gameLoop);
+            clearInterval(timerInterval);
+            showMessage('Game Over!', 'You reached Round ' + round + ' with length ' + snake.length, 'Play Again');
+        }
+
+        function respawn() {
+            // Keep current length but respawn in center
+            const currentLength = snake.length;
+            snake = [];
+            const startX = Math.floor(COLS / 2);
+            const startY = Math.floor(ROWS / 2);
+            for (let i = 0; i < currentLength; i++) {
+                snake.push({ x: startX - i, y: startY });
+            }
+            direction = { x: 1, y: 0 };
+            nextDirection = { x: 1, y: 0 };
+            directionQueue = [];
+            // Brief invincibility flash effect handled in draw
+            updateUI();
+        }
+
+        function showMessage(title, text, btnText) {
+            document.getElementById('msg-title').textContent = title;
+            document.getElementById('msg-text').textContent = text;
+            document.getElementById('msg-btn').textContent = btnText;
+            document.getElementById('message').style.display = 'block';
+        }
+
+        function nextAction() {
+            document.getElementById('message').style.display = 'none';
+            if (gameOver) {
+                round = 1;
+                snake = [];
+                coins = 0;
+                lives = 0;
+                fallingCoins = [];
+            } else {
+                round++;
+            }
+            startRound();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameStarted) return;
+            const key = e.key.toLowerCase();
+
+            // Get the last queued direction or current direction for validation
+            const lastDir = directionQueue.length > 0 ? directionQueue[directionQueue.length - 1] : direction;
+
+            let newDir = null;
+            if ((key === 'arrowup' || key === 'w') && lastDir.y !== 1) {
+                newDir = { x: 0, y: -1 };
+            } else if ((key === 'arrowdown' || key === 's') && lastDir.y !== -1) {
+                newDir = { x: 0, y: 1 };
+            } else if ((key === 'arrowleft' || key === 'a') && lastDir.x !== 1) {
+                newDir = { x: -1, y: 0 };
+            } else if ((key === 'arrowright' || key === 'd') && lastDir.x !== -1) {
+                newDir = { x: 1, y: 0 };
+            }
+
+            if (newDir && directionQueue.length < 3) {
+                directionQueue.push(newDir);
+            }
+            e.preventDefault();
+        });
+
+        init();
+    </script>
+</body>
+</html>
