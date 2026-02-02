@@ -1,5 +1,5 @@
 {
-  "name": "@anthropic-internal/snake",
+  "name": "@majority-protocol/snake",
   "version": "1.0.0",
   "description": "Snake Rounds game for Majority apps",
   "main": "dist/index.js",
