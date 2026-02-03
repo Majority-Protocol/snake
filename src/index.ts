@@ -46,19 +46,22 @@ export const snakeGameHtml = `
         }
         .header-left {
             display: flex;
-            align-items: center;
-            gap: 6px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
             margin-left: 45px;
         }
         .header-right {
             display: flex;
-            align-items: center;
-            gap: 6px;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
         }
         .header-center {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 2px;
         }
         .stat-label {
             font-size: 11px;
@@ -198,22 +201,15 @@ export const snakeGameHtml = `
     <div id="header">
         <div class="header-row">
             <div class="header-left">
-                <span class="stat-label">ROUND</span>
-                <span class="stat-val" id="round">1</span>
+                <span class="stat-label">ROUND <span class="stat-val" id="round">1</span></span>
+                <span class="stat-val">🐍 <span id="length">3</span>/<span id="target">11</span></span>
             </div>
             <div class="header-center">
                 <div class="stat-timer" id="timer">60</div>
                 <div class="stat-speed" id="speed">NORMAL</div>
             </div>
             <div class="header-right">
-                <span class="stat-val">🐍 <span id="length">3</span>/<span id="target">11</span></span>
-            </div>
-        </div>
-        <div class="header-row">
-            <div class="header-left">
                 <span class="stat-pill">💰 <span id="coins">0</span>/50</span>
-            </div>
-            <div class="header-right">
                 <span class="stat-pill">❤️ <span id="lives">0</span></span>
             </div>
         </div>
