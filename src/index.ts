@@ -198,7 +198,7 @@ export const snakeGameHtml = `
     <div id="header">
         <div class="header-row">
             <div class="header-left">
-                <span class="stat-label">R</span>
+                <span class="stat-label">ROUND</span>
                 <span class="stat-val" id="round">1</span>
             </div>
             <div class="header-center">
