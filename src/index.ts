@@ -273,7 +273,10 @@ export const snakeGameHtml = `
         }
 
         function startRound() {
-            var startLength = round === 1 ? 3 : snake.length;
+            // Every 3rd round is a "growth round"
+            var isGrowthRound = round % 3 === 0;
+            // Growth rounds: start small, grow long. Other rounds: keep current length
+            var startLength = (round === 1 || isGrowthRound) ? 3 : snake.length;
             snake = [];
             var startX = Math.floor(COLS / 2);
             var startY = Math.floor(ROWS / 2);
@@ -282,14 +285,16 @@ export const snakeGameHtml = `
             }
             direction = { x: 1, y: 0 };
             nextDirection = { x: 1, y: 0 };
-            targetLength = startLength + 5 + (round * 3);
+            // Growth rounds have high target length, others are normal
+            targetLength = isGrowthRound ? 25 + (round * 2) : startLength + 5 + (round * 3);
             barriers = generateBarriers();
             gameOver = false;
             roundComplete = false;
             baseSpeed = 100;
             gameSpeed = baseSpeed;
             icePowerUp = null;
-            roundTimeLimit = Math.max(30, 60 - (round - 1) * 5);
+            // Growth rounds get longer time
+            roundTimeLimit = isGrowthRound ? 90 : Math.max(30, 60 - (round - 1) * 5);
             roundTimer = roundTimeLimit;
             startTimer();
             placeFood();
@@ -326,7 +331,7 @@ export const snakeGameHtml = `
         }
 
         function changeSpeed(newSpeed) {
-            gameSpeed = Math.max(40, Math.min(150, newSpeed));
+            gameSpeed = Math.max(60, Math.min(150, newSpeed));
             startGameLoop();
             updateUI();
         }
@@ -367,12 +372,19 @@ export const snakeGameHtml = `
                         !barriers.some(function(b) { return b.x === food.x && b.y === food.y; });
                 attempts++;
             }
-            var roll = Math.random();
-            if (roll < 0.15) foodType = 'ultra';
-            else if (roll < 0.40) foodType = 'speed';
-            else foodType = 'normal';
+            // Every 3rd round is a "growth round" - only normal food, no speed modifiers
+            var isGrowthRound = round % 3 === 0;
+            if (isGrowthRound) {
+                foodType = 'normal';
+            } else {
+                var roll = Math.random();
+                if (roll < 0.15) foodType = 'ultra';
+                else if (roll < 0.40) foodType = 'speed';
+                else foodType = 'normal';
+            }
 
-            if (!icePowerUp && Math.random() < 0.25) {
+            // No ice power-ups on growth rounds
+            if (!icePowerUp && Math.random() < 0.25 && !isGrowthRound) {
                 placeIcePowerUp();
             }
         }
@@ -443,8 +455,9 @@ export const snakeGameHtml = `
             }
 
             if (newHead.x === food.x && newHead.y === food.y) {
-                if (foodType === 'ultra') changeSpeed(gameSpeed - 30);
-                else if (foodType === 'speed') changeSpeed(gameSpeed - 15);
+                // Speed boosts are fixed, not cumulative
+                if (foodType === 'ultra') changeSpeed(baseSpeed - 15);
+                else if (foodType === 'speed') changeSpeed(baseSpeed - 10);
                 placeFood();
                 if (snake.length >= targetLength) completeRound();
             } else {
