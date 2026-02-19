@@ -209,6 +209,7 @@ export const snakeGameHtml = `
                 <div class="stat-speed" id="speed">NORMAL</div>
             </div>
             <div class="header-right">
+                <span class="stat-pill">⭐ <span id="score">0</span></span>
                 <span class="stat-pill">💰 <span id="coins">0</span>/50</span>
                 <span class="stat-pill">❤️ <span id="lives">0</span></span>
             </div>
@@ -241,9 +242,11 @@ export const snakeGameHtml = `
         var snake, direction, nextDirection, food, barriers;
         var round, targetLength, gameOver, roundComplete, gameLoop;
         var gameSpeed, baseSpeed, foodType, icePowerUp;
-        var coins, lives, fallingCoins;
+        var coins, lives, fallingCoins, totalScore;
         var roundTimer, roundTimeLimit, timerInterval;
         var gameStarted = false;
+        var contestConfig = null;
+        var sessionStartTime = null;
 
         function resize() {
             canvas.width = window.innerWidth;
@@ -268,7 +271,10 @@ export const snakeGameHtml = `
             round = 1;
             coins = 0;
             lives = 0;
+            totalScore = 0;
             fallingCoins = [];
+            sessionStartTime = new Date().toISOString();
+            postSessionMessage('SESSION_START', { startTime: sessionStartTime });
             startRound();
         }
 
@@ -322,7 +328,16 @@ export const snakeGameHtml = `
             gameOver = true;
             clearInterval(gameLoop);
             clearInterval(timerInterval);
-            showMessage("Time's Up!", 'Round ' + round + ' • Length ' + snake.length, 'Try Again');
+            var finalScore = totalScore + snake.length;
+            postSessionMessage('SESSION_END', {
+                score: finalScore,
+                round: round,
+                length: snake.length,
+                targetLength: targetLength,
+                startTime: sessionStartTime,
+                endTime: new Date().toISOString()
+            });
+            showMessage("Time's Up!", 'Score: ' + finalScore + ' • Round ' + round, 'Try Again');
         }
 
         function startGameLoop() {
@@ -718,6 +733,7 @@ export const snakeGameHtml = `
             document.getElementById('round').textContent = round;
             document.getElementById('length').textContent = snake.length;
             document.getElementById('target').textContent = targetLength;
+            document.getElementById('score').textContent = totalScore + snake.length;
             document.getElementById('coins').textContent = coins;
             document.getElementById('lives').textContent = lives;
             document.getElementById('timer').textContent = roundTimer;
@@ -737,9 +753,10 @@ export const snakeGameHtml = `
 
         function completeRound() {
             roundComplete = true;
+            totalScore += snake.length;
             clearInterval(gameLoop);
             clearInterval(timerInterval);
-            showMessage('Round ' + round + ' Complete!', 'Length: ' + snake.length + ' • Next target: ' + (snake.length + 5 + ((round + 1) * 3)), 'Next Round');
+            showMessage('Round ' + round + ' Complete!', 'Score: ' + totalScore + ' • Length: ' + snake.length, 'Next Round');
         }
 
         function endGame() {
@@ -751,7 +768,16 @@ export const snakeGameHtml = `
             gameOver = true;
             clearInterval(gameLoop);
             clearInterval(timerInterval);
-            showMessage('Game Over!', 'Round ' + round + ' • Final length: ' + snake.length, 'Play Again');
+            var finalScore = totalScore + snake.length;
+            postSessionMessage('SESSION_END', {
+                score: finalScore,
+                round: round,
+                length: snake.length,
+                targetLength: targetLength,
+                startTime: sessionStartTime,
+                endTime: new Date().toISOString()
+            });
+            showMessage('Game Over!', 'Score: ' + finalScore + ' • Round ' + round, 'Play Again');
         }
 
         function respawn() {
@@ -781,7 +807,10 @@ export const snakeGameHtml = `
                 snake = [];
                 coins = 0;
                 lives = 0;
+                totalScore = 0;
                 fallingCoins = [];
+                sessionStartTime = new Date().toISOString();
+                postSessionMessage('SESSION_START', { startTime: sessionStartTime });
             } else {
                 round++;
             }
@@ -834,6 +863,35 @@ export const snakeGameHtml = `
                 startGameLoop();
             }
             e.preventDefault();
+        });
+
+        function postSessionMessage(type, data) {
+            var msg = { type: type };
+            if (contestConfig) {
+                msg.gameID = contestConfig.gameID;
+                msg.username = contestConfig.username;
+                msg.walletAddress = contestConfig.walletAddress;
+            }
+            for (var key in data) { msg[key] = data[key]; }
+            console.log('[Snake]', type, msg);
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage(msg, '*');
+                }
+                if (window.ReactNativeWebView) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+                }
+            } catch(e) {}
+        }
+
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'CONTEST_CONFIG') {
+                contestConfig = {
+                    gameID: e.data.gameID,
+                    username: e.data.username,
+                    walletAddress: e.data.walletAddress
+                };
+            }
         });
 
         init();
