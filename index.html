@@ -242,6 +242,8 @@
         var coins, lives, fallingCoins;
         var roundTimer, roundTimeLimit, timerInterval;
         var gameStarted = false;
+        var contestConfig = null;
+        var sessionStartTime = null;
 
         function resize() {
             canvas.width = window.innerWidth;
@@ -267,6 +269,8 @@
             coins = 0;
             lives = 0;
             fallingCoins = [];
+            sessionStartTime = new Date().toISOString();
+            postSessionMessage('SESSION_START', { startTime: sessionStartTime });
             startRound();
         }
 
@@ -315,6 +319,14 @@
             gameOver = true;
             clearInterval(gameLoop);
             clearInterval(timerInterval);
+            postSessionMessage('SESSION_END', {
+                score: round,
+                round: round,
+                length: snake.length,
+                targetLength: targetLength,
+                startTime: sessionStartTime,
+                endTime: new Date().toISOString()
+            });
             showMessage("Time's Up!", 'Round ' + round + ' • Length ' + snake.length, 'Try Again');
         }
 
@@ -722,6 +734,14 @@
             gameOver = true;
             clearInterval(gameLoop);
             clearInterval(timerInterval);
+            postSessionMessage('SESSION_END', {
+                score: round,
+                round: round,
+                length: snake.length,
+                targetLength: targetLength,
+                startTime: sessionStartTime,
+                endTime: new Date().toISOString()
+            });
             showMessage('Game Over!', 'Round ' + round + ' • Final length: ' + snake.length, 'Play Again');
         }
 
@@ -753,6 +773,8 @@
                 coins = 0;
                 lives = 0;
                 fallingCoins = [];
+                sessionStartTime = new Date().toISOString();
+                postSessionMessage('SESSION_START', { startTime: sessionStartTime });
             } else {
                 round++;
             }
@@ -805,6 +827,35 @@
                 startGameLoop();
             }
             e.preventDefault();
+        });
+
+        function postSessionMessage(type, data) {
+            var msg = { type: type };
+            if (contestConfig) {
+                msg.gameID = contestConfig.gameID;
+                msg.username = contestConfig.username;
+                msg.walletAddress = contestConfig.walletAddress;
+            }
+            for (var key in data) { msg[key] = data[key]; }
+            console.log('[Snake]', type, msg);
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage(msg, '*');
+                }
+                if (window.ReactNativeWebView) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+                }
+            } catch(e) {}
+        }
+
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'CONTEST_CONFIG') {
+                contestConfig = {
+                    gameID: e.data.gameID,
+                    username: e.data.username,
+                    walletAddress: e.data.walletAddress
+                };
+            }
         });
 
         init();
