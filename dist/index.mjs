@@ -269,7 +269,7 @@ var snakeGameHtml = `
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Snake Rounds</title>
+    <title>Snake Xtreme</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
@@ -391,6 +391,7 @@ var snakeGameHtml = `
             -webkit-text-fill-color: transparent;
         }
         .instructions {
+            display: inline-block;
             text-align: left;
             margin-bottom: 24px;
         }
@@ -482,7 +483,7 @@ var snakeGameHtml = `
     </div>
     <canvas id="canvas"></canvas>
     <div id="howToPlay">
-        <h2>\u{1F40D} Snake Rounds</h2>
+        <h2>\u{1F40D} Snake Xtreme</h2>
         <div class="instructions">
             <div class="instruction-item"><span class="instruction-icon icon-coconut">\u{1F965}</span> Brown = Grow (normal)</div>
             <div class="instruction-item"><span class="instruction-icon icon-speed">\u26A1</span> Green = Speed boost</div>
@@ -1221,7 +1222,7 @@ var snakeGameHtml = `
                 msg.walletAddress = contestConfig.walletAddress;
             }
             for (var key in data) { msg[key] = data[key]; }
-            console.log('[Snake]', type, msg);
+            console.log('[Snake Xtreme]', type, msg);
             try {
                 if (window.parent && window.parent !== window) {
                     window.parent.postMessage(msg, '*');
