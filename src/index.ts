@@ -1,3 +1,7 @@
+export { replaySnakeGame } from "./replay";
+export { mulberry32, CONTEST_COLS, CONTEST_ROWS } from "./core";
+export type { GameInput, ReplayResult } from "./core";
+
 export const snakeGameHtml = `
 <!DOCTYPE html>
 <html>
@@ -248,14 +252,42 @@ export const snakeGameHtml = `
         var contestConfig = null;
         var sessionStartTime = null;
 
+        // Deterministic replay support
+        var sessionId = null;
+        var sessionSeed = null;
+        var rng = Math.random; // default; replaced with seeded PRNG in contest mode
+        var tickCount = 0;
+        var inputLog = [];
+
+        // Mulberry32 seeded PRNG (deterministic)
+        function mulberry32(seed) {
+            var s = seed | 0;
+            return function() {
+                s = (s + 0x6D2B79F5) | 0;
+                var t = Math.imul(s ^ (s >>> 15), 1 | s);
+                t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            };
+        }
+
+        // Fixed contest grid constants
+        var CONTEST_COLS = 20;
+        var CONTEST_ROWS = 20;
+
         function resize() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             GRID = Math.floor(Math.min(canvas.width, canvas.height) / 20);
             TOP_OFFSET = Math.ceil(130 / GRID);
             BOTTOM_OFFSET = Math.ceil(40 / GRID);
-            COLS = Math.floor(canvas.width / GRID);
-            ROWS = Math.floor(canvas.height / GRID) - TOP_OFFSET - BOTTOM_OFFSET;
+            if (sessionSeed !== null) {
+                // Contest mode: fixed grid for deterministic replay
+                COLS = CONTEST_COLS;
+                ROWS = CONTEST_ROWS;
+            } else {
+                COLS = Math.floor(canvas.width / GRID);
+                ROWS = Math.floor(canvas.height / GRID) - TOP_OFFSET - BOTTOM_OFFSET;
+            }
             if (snake && snake.length > 0) draw();
         }
         window.addEventListener('resize', resize);
@@ -265,6 +297,8 @@ export const snakeGameHtml = `
             document.getElementById('howToPlay').style.display = 'block';
         }
 
+        var waitingForSeed = false;
+
         function startGame() {
             document.getElementById('howToPlay').style.display = 'none';
             gameStarted = true;
@@ -273,8 +307,16 @@ export const snakeGameHtml = `
             lives = 0;
             totalScore = 0;
             fallingCoins = [];
+            tickCount = 0;
+            inputLog = [];
             sessionStartTime = new Date().toISOString();
             postSessionMessage('SESSION_START', { startTime: sessionStartTime });
+            // In contest mode, wait for SESSION_SEED before starting
+            if (contestConfig) {
+                waitingForSeed = true;
+                return;
+            }
+            rng = Math.random;
             startRound();
         }
 
@@ -313,6 +355,7 @@ export const snakeGameHtml = `
             timerInterval = setInterval(function() {
                 if (gameOver || roundComplete) return;
                 roundTimer--;
+                inputLog.push({ tick: tickCount, dx: 0, dy: 0, timer: 1 });
                 updateUI();
                 if (roundTimer <= 0) timeUp();
             }, 1000);
@@ -335,7 +378,9 @@ export const snakeGameHtml = `
                 length: snake.length,
                 targetLength: targetLength,
                 startTime: sessionStartTime,
-                endTime: new Date().toISOString()
+                endTime: new Date().toISOString(),
+                sessionId: sessionId,
+                inputs: inputLog
             });
             showMessage("Time's Up!", 'Score: ' + finalScore + ' • Round ' + round, 'Try Again');
         }
@@ -359,10 +404,10 @@ export const snakeGameHtml = `
             var snakeStartY = Math.floor(ROWS / 2);
 
             for (var i = 0; i < numBarriers; i++) {
-                var isHorizontal = Math.random() > 0.5;
-                var length = 3 + Math.floor(Math.random() * (round + 2));
-                var startX = Math.floor(Math.random() * (COLS - length - 4)) + 2;
-                var startY = Math.floor(Math.random() * (ROWS - length - 4)) + 2;
+                var isHorizontal = rng() > 0.5;
+                var length = 3 + Math.floor(rng() * (round + 2));
+                var startX = Math.floor(rng() * (COLS - length - 4)) + 2;
+                var startY = Math.floor(rng() * (ROWS - length - 4)) + 2;
 
                 for (var j = 0; j < length; j++) {
                     var bx = isHorizontal ? startX + j : startX;
@@ -380,8 +425,8 @@ export const snakeGameHtml = `
             var attempts = 0;
             while (!valid && attempts < 1000) {
                 food = {
-                    x: Math.floor(Math.random() * COLS),
-                    y: Math.floor(Math.random() * ROWS)
+                    x: Math.floor(rng() * COLS),
+                    y: Math.floor(rng() * ROWS)
                 };
                 valid = !snake.some(function(s) { return s.x === food.x && s.y === food.y; }) &&
                         !barriers.some(function(b) { return b.x === food.x && b.y === food.y; });
@@ -392,14 +437,14 @@ export const snakeGameHtml = `
             if (isGrowthRound) {
                 foodType = 'normal';
             } else {
-                var roll = Math.random();
+                var roll = rng();
                 if (roll < 0.15) foodType = 'ultra';
                 else if (roll < 0.40) foodType = 'speed';
                 else foodType = 'normal';
             }
 
             // No ice power-ups on growth rounds
-            if (!icePowerUp && Math.random() < 0.25 && !isGrowthRound) {
+            if (!icePowerUp && rng() < 0.25 && !isGrowthRound) {
                 placeIcePowerUp();
             }
         }
@@ -409,8 +454,8 @@ export const snakeGameHtml = `
             var attempts = 0;
             while (!valid && attempts < 500) {
                 icePowerUp = {
-                    x: Math.floor(Math.random() * COLS),
-                    y: Math.floor(Math.random() * ROWS)
+                    x: Math.floor(rng() * COLS),
+                    y: Math.floor(rng() * ROWS)
                 };
                 valid = !snake.some(function(s) { return s.x === icePowerUp.x && s.y === icePowerUp.y; }) &&
                         !barriers.some(function(b) { return b.x === icePowerUp.x && b.y === icePowerUp.y; }) &&
@@ -421,7 +466,7 @@ export const snakeGameHtml = `
 
         function spawnCoin() {
             fallingCoins.push({
-                x: Math.floor(Math.random() * COLS),
+                x: Math.floor(rng() * COLS),
                 y: 0,
                 fallProgress: 0
             });
@@ -430,7 +475,8 @@ export const snakeGameHtml = `
         function update() {
             if (gameOver || roundComplete) return;
 
-            if (Math.random() < 0.03) spawnCoin();
+            tickCount++;
+            if (rng() < 0.03) spawnCoin();
 
             fallingCoins.forEach(function(c) { c.fallProgress += 0.2; });
             fallingCoins = fallingCoins.filter(function(c) { return c.fallProgress < ROWS; });
@@ -775,7 +821,9 @@ export const snakeGameHtml = `
                 length: snake.length,
                 targetLength: targetLength,
                 startTime: sessionStartTime,
-                endTime: new Date().toISOString()
+                endTime: new Date().toISOString(),
+                sessionId: sessionId,
+                inputs: inputLog
             });
             showMessage('Game Over!', 'Score: ' + finalScore + ' • Round ' + round, 'Play Again');
         }
@@ -809,8 +857,12 @@ export const snakeGameHtml = `
                 lives = 0;
                 totalScore = 0;
                 fallingCoins = [];
+                tickCount = 0;
+                inputLog = [];
                 sessionStartTime = new Date().toISOString();
                 postSessionMessage('SESSION_START', { startTime: sessionStartTime });
+                // Wait for new SESSION_SEED before starting if in contest mode
+                if (contestConfig) return;
             } else {
                 round++;
             }
@@ -844,6 +896,7 @@ export const snakeGameHtml = `
                 }
                 if (newDir) {
                     nextDirection = newDir;
+                    inputLog.push({ tick: tickCount, dx: newDir.x, dy: newDir.y });
                     update();
                     startGameLoop();
                 }
@@ -859,6 +912,7 @@ export const snakeGameHtml = `
             if (e.key === 'ArrowRight' && direction.x !== -1) newDir = {x: 1, y: 0};
             if (newDir) {
                 nextDirection = newDir;
+                inputLog.push({ tick: tickCount, dx: newDir.x, dy: newDir.y });
                 update();
                 startGameLoop();
             }
@@ -891,6 +945,17 @@ export const snakeGameHtml = `
                     username: e.data.username,
                     walletAddress: e.data.walletAddress
                 };
+            }
+            if (e.data && e.data.type === 'SESSION_SEED') {
+                sessionId = e.data.sessionId;
+                sessionSeed = e.data.seed;
+                rng = mulberry32(sessionSeed);
+                resize(); // recompute grid with fixed contest dims
+                // Start the round if game is waiting for seed
+                if (waitingForSeed || (gameStarted && gameOver)) {
+                    waitingForSeed = false;
+                    startRound();
+                }
             }
         });
 
