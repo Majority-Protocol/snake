@@ -46,6 +46,8 @@ export function replaySnakeGame({
     }
   }
 
+  const foodSpawnTicks: number[] = [];
+
   let round = 1;
   let coins = 0;
   let lives = 0;
@@ -282,6 +284,7 @@ export function replaySnakeGame({
       if (foodType === "ultra") changeSpeed(baseSpeed - 15);
       else if (foodType === "speed") changeSpeed(baseSpeed - 10);
       placeFood();
+      foodSpawnTicks.push(tickCount);
       if (snake.length >= targetLength) {
         completeRound();
       }
@@ -350,5 +353,5 @@ export function replaySnakeGame({
   }
 
   const finalScore = totalScore + snake.length;
-  return { score: finalScore, round, length: snake.length };
+  return { score: finalScore, round, length: snake.length, foodSpawnTicks };
 }

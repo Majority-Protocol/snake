@@ -23,4 +23,9 @@ export function mulberry32(seed: number): () => number {
 // Shared types
 // dx/dy = direction input; timer = 1 means "1 second elapsed" (wall-clock timer tick)
 export type GameInput = { tick: number; dx: number; dy: number; timer?: number };
-export type ReplayResult = { score: number; round: number; length: number };
+export type ReplayResult = {
+  score: number;
+  round: number;
+  length: number;
+  foodSpawnTicks: number[];
+};
