@@ -622,7 +622,9 @@ var snakeGameHtml = `
         var waitingForSeed = false;
 
         function calculateContestRows() {
-            var headerPx = isEmbedded ? 44 : 130;
+            // Measure actual HUD height on screen (includes safe area CSS overrides)
+            var hudEl = document.getElementById('hud');
+            var headerPx = hudEl ? hudEl.getBoundingClientRect().bottom : (isEmbedded ? 44 : 130);
             var bottomPx = 20;
             var cellSize = Math.floor(canvas.width / CONTEST_COLS);
             if (cellSize <= 0) return CONTEST_ROWS;
