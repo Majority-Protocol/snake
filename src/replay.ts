@@ -9,13 +9,12 @@
 import {
   CONTEST_COLS,
   CONTEST_ROWS,
+  MAX_CONTEST_ROWS,
+  MIN_CONTEST_ROWS,
   type GameInput,
   type ReplayResult,
   mulberry32,
 } from "./core";
-
-const COLS = CONTEST_COLS;
-const ROWS = CONTEST_ROWS;
 
 // At the fastest possible game speed (60ms), max ticks per second is ~17.
 // We use 2x buffer to allow for edge cases but still cap runaway games.
@@ -29,10 +28,18 @@ type FallingCoin = { x: number; fallProgress: number };
 export function replaySnakeGame({
   seed,
   inputs,
+  rows: rowsParam,
 }: {
   seed: number;
   inputs: GameInput[];
+  rows?: number;
 }): ReplayResult {
+  const COLS = CONTEST_COLS;
+  const ROWS =
+    rowsParam != null
+      ? Math.max(MIN_CONTEST_ROWS, Math.min(MAX_CONTEST_ROWS, rowsParam))
+      : CONTEST_ROWS;
+
   const rng = mulberry32(seed);
 
   // Separate direction inputs from timer events
@@ -45,6 +52,8 @@ export function replaySnakeGame({
       directionInputs.set(inp.tick, { dx: inp.dx, dy: inp.dy });
     }
   }
+
+  const foodSpawnTicks: number[] = [];
 
   let round = 1;
   let coins = 0;
@@ -282,6 +291,7 @@ export function replaySnakeGame({
       if (foodType === "ultra") changeSpeed(baseSpeed - 15);
       else if (foodType === "speed") changeSpeed(baseSpeed - 10);
       placeFood();
+      foodSpawnTicks.push(tickCount);
       if (snake.length >= targetLength) {
         completeRound();
       }
@@ -350,5 +360,5 @@ export function replaySnakeGame({
   }
 
   const finalScore = totalScore + snake.length;
-  return { score: finalScore, round, length: snake.length };
+  return { score: finalScore, round, length: snake.length, foodSpawnTicks };
 }

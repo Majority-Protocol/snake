@@ -1,5 +1,11 @@
 export { replaySnakeGame } from "./replay";
-export { mulberry32, CONTEST_COLS, CONTEST_ROWS } from "./core";
+export {
+  mulberry32,
+  CONTEST_COLS,
+  CONTEST_ROWS,
+  MIN_CONTEST_ROWS,
+  MAX_CONTEST_ROWS,
+} from "./core";
 export type { GameInput, ReplayResult } from "./core";
 
 export const snakeGameHtml = `
@@ -278,6 +284,8 @@ export const snakeGameHtml = `
         // Fixed contest grid — must match CONTEST_COLS/CONTEST_ROWS in core.ts
         var CONTEST_COLS = 20;
         var CONTEST_ROWS = 20;
+        var MIN_CONTEST_ROWS = 20;
+        var MAX_CONTEST_ROWS = 45;
 
         function resize() {
             canvas.width = window.innerWidth;
@@ -322,9 +330,22 @@ export const snakeGameHtml = `
 
         var waitingForSeed = false;
 
+        function calculateContestRows() {
+            var headerPx = isEmbedded ? 44 : 130;
+            var bottomPx = 20;
+            var cellSize = Math.floor(canvas.width / CONTEST_COLS);
+            if (cellSize <= 0) return CONTEST_ROWS;
+            var availRows = Math.floor((canvas.height - headerPx - bottomPx) / cellSize);
+            return Math.max(MIN_CONTEST_ROWS, Math.min(MAX_CONTEST_ROWS, availRows));
+        }
+
         function startGame() {
             document.getElementById('howToPlay').style.display = 'none';
             gameStarted = true;
+            // Calculate dynamic rows for contest/embedded mode
+            if (contestConfig || isEmbedded) {
+                CONTEST_ROWS = calculateContestRows();
+            }
             round = 1;
             coins = 0;
             lives = 0;
@@ -333,7 +354,7 @@ export const snakeGameHtml = `
             tickCount = 0;
             inputLog = [];
             sessionStartTime = new Date().toISOString();
-            postSessionMessage('SESSION_START', { startTime: sessionStartTime });
+            postSessionMessage('SESSION_START', { startTime: sessionStartTime, rows: CONTEST_ROWS });
             // In contest/embedded mode, wait for SESSION_SEED before starting
             if (contestConfig || isEmbedded) {
                 waitingForSeed = true;
@@ -875,6 +896,10 @@ export const snakeGameHtml = `
         function nextAction() {
             document.getElementById('message').style.display = 'none';
             if (gameOver) {
+                // Recalculate dynamic rows for new game
+                if (contestConfig || isEmbedded) {
+                    CONTEST_ROWS = calculateContestRows();
+                }
                 round = 1;
                 snake = [];
                 coins = 0;
@@ -884,7 +909,7 @@ export const snakeGameHtml = `
                 tickCount = 0;
                 inputLog = [];
                 sessionStartTime = new Date().toISOString();
-                postSessionMessage('SESSION_START', { startTime: sessionStartTime });
+                postSessionMessage('SESSION_START', { startTime: sessionStartTime, rows: CONTEST_ROWS });
                 // Wait for new SESSION_SEED before starting if in contest/embedded mode
                 if (contestConfig || isEmbedded) return;
             } else {

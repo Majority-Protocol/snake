@@ -7,7 +7,11 @@
 
 // Fixed grid dimensions used in contest mode
 export const CONTEST_COLS = 20;
-export const CONTEST_ROWS = 20;
+export const CONTEST_ROWS = 20; // default; clients may send a dynamic value
+
+// Bounds for dynamic row count (enforced by both client and server)
+export const MIN_CONTEST_ROWS = 20;
+export const MAX_CONTEST_ROWS = 45;
 
 // Mulberry32 seeded PRNG — deterministic random from a 32-bit seed
 export function mulberry32(seed: number): () => number {
@@ -23,4 +27,9 @@ export function mulberry32(seed: number): () => number {
 // Shared types
 // dx/dy = direction input; timer = 1 means "1 second elapsed" (wall-clock timer tick)
 export type GameInput = { tick: number; dx: number; dy: number; timer?: number };
-export type ReplayResult = { score: number; round: number; length: number };
+export type ReplayResult = {
+  score: number;
+  round: number;
+  length: number;
+  foodSpawnTicks: number[];
+};
