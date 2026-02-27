@@ -22,6 +22,8 @@ var index_exports = {};
 __export(index_exports, {
   CONTEST_COLS: () => CONTEST_COLS,
   CONTEST_ROWS: () => CONTEST_ROWS,
+  MAX_CONTEST_ROWS: () => MAX_CONTEST_ROWS,
+  MIN_CONTEST_ROWS: () => MIN_CONTEST_ROWS,
   mulberry32: () => mulberry32,
   replaySnakeGame: () => replaySnakeGame,
   snakeGameHtml: () => snakeGameHtml
@@ -31,6 +33,8 @@ module.exports = __toCommonJS(index_exports);
 // src/core.ts
 var CONTEST_COLS = 20;
 var CONTEST_ROWS = 20;
+var MIN_CONTEST_ROWS = 20;
+var MAX_CONTEST_ROWS = 45;
 function mulberry32(seed) {
   let s = seed | 0;
   return () => {
@@ -42,15 +46,16 @@ function mulberry32(seed) {
 }
 
 // src/replay.ts
-var COLS = CONTEST_COLS;
-var ROWS = CONTEST_ROWS;
 var MIN_GAME_SPEED_MS = 60;
 var MAX_TICKS_PER_SECOND = Math.ceil(1e3 / MIN_GAME_SPEED_MS);
 var ROUND_TICK_BUFFER = 2;
 function replaySnakeGame({
   seed,
-  inputs
+  inputs,
+  rows: rowsParam
 }) {
+  const COLS = CONTEST_COLS;
+  const ROWS = rowsParam != null ? Math.max(MIN_CONTEST_ROWS, Math.min(MAX_CONTEST_ROWS, rowsParam)) : CONTEST_ROWS;
   const rng = mulberry32(seed);
   const directionInputs = /* @__PURE__ */ new Map();
   const timerTicks = /* @__PURE__ */ new Set();
@@ -61,6 +66,7 @@ function replaySnakeGame({
       directionInputs.set(inp.tick, { dx: inp.dx, dy: inp.dy });
     }
   }
+  const foodSpawnTicks = [];
   let round = 1;
   let coins = 0;
   let lives = 0;
@@ -250,6 +256,7 @@ function replaySnakeGame({
       if (foodType === "ultra") changeSpeed(baseSpeed - 15);
       else if (foodType === "speed") changeSpeed(baseSpeed - 10);
       placeFood();
+      foodSpawnTicks.push(tickCount);
       if (snake.length >= targetLength) {
         completeRound();
       }
@@ -288,7 +295,7 @@ function replaySnakeGame({
     }
   }
   const finalScore = totalScore + snake.length;
-  return { score: finalScore, round, length: snake.length };
+  return { score: finalScore, round, length: snake.length, foodSpawnTicks };
 }
 
 // src/index.ts
@@ -568,6 +575,8 @@ var snakeGameHtml = `
         // Fixed contest grid \u2014 must match CONTEST_COLS/CONTEST_ROWS in core.ts
         var CONTEST_COLS = 20;
         var CONTEST_ROWS = 20;
+        var MIN_CONTEST_ROWS = 20;
+        var MAX_CONTEST_ROWS = 45;
 
         function resize() {
             canvas.width = window.innerWidth;
@@ -612,9 +621,22 @@ var snakeGameHtml = `
 
         var waitingForSeed = false;
 
+        function calculateContestRows() {
+            var headerPx = isEmbedded ? 44 : 130;
+            var bottomPx = 20;
+            var cellSize = Math.floor(canvas.width / CONTEST_COLS);
+            if (cellSize <= 0) return CONTEST_ROWS;
+            var availRows = Math.floor((canvas.height - headerPx - bottomPx) / cellSize);
+            return Math.max(MIN_CONTEST_ROWS, Math.min(MAX_CONTEST_ROWS, availRows));
+        }
+
         function startGame() {
             document.getElementById('howToPlay').style.display = 'none';
             gameStarted = true;
+            // Calculate dynamic rows for contest/embedded mode
+            if (contestConfig || isEmbedded) {
+                CONTEST_ROWS = calculateContestRows();
+            }
             round = 1;
             coins = 0;
             lives = 0;
@@ -623,7 +645,7 @@ var snakeGameHtml = `
             tickCount = 0;
             inputLog = [];
             sessionStartTime = new Date().toISOString();
-            postSessionMessage('SESSION_START', { startTime: sessionStartTime });
+            postSessionMessage('SESSION_START', { startTime: sessionStartTime, rows: CONTEST_ROWS });
             // In contest/embedded mode, wait for SESSION_SEED before starting
             if (contestConfig || isEmbedded) {
                 waitingForSeed = true;
@@ -1165,6 +1187,10 @@ var snakeGameHtml = `
         function nextAction() {
             document.getElementById('message').style.display = 'none';
             if (gameOver) {
+                // Recalculate dynamic rows for new game
+                if (contestConfig || isEmbedded) {
+                    CONTEST_ROWS = calculateContestRows();
+                }
                 round = 1;
                 snake = [];
                 coins = 0;
@@ -1174,7 +1200,7 @@ var snakeGameHtml = `
                 tickCount = 0;
                 inputLog = [];
                 sessionStartTime = new Date().toISOString();
-                postSessionMessage('SESSION_START', { startTime: sessionStartTime });
+                postSessionMessage('SESSION_START', { startTime: sessionStartTime, rows: CONTEST_ROWS });
                 // Wait for new SESSION_SEED before starting if in contest/embedded mode
                 if (contestConfig || isEmbedded) return;
             } else {
@@ -1293,6 +1319,8 @@ var snakeGameHtml = `
 0 && (module.exports = {
   CONTEST_COLS,
   CONTEST_ROWS,
+  MAX_CONTEST_ROWS,
+  MIN_CONTEST_ROWS,
   mulberry32,
   replaySnakeGame,
   snakeGameHtml
