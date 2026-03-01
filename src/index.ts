@@ -196,15 +196,43 @@ export const snakeGameHtml = `
         }
         #message h2 { font-size: 24px; margin-bottom: 10px; }
         #message p { color: rgba(255,255,255,0.7); margin-bottom: 20px; }
-        #message button {
-            background: linear-gradient(135deg, #f39c12, #e67e22);
+        #msg-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        #msg-buttons button {
             border: none;
             color: #fff;
-            padding: 14px 40px;
+            padding: 14px 32px;
             font-size: 16px;
             font-weight: 700;
             border-radius: 25px;
             cursor: pointer;
+        }
+        #msg-play-btn {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+        #msg-home-btn {
+            background: linear-gradient(135deg, #636e72, #2d3436);
+            display: none;
+        }
+        #countdown {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 40;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.6);
+        }
+        #countdown-text {
+            font-size: 96px;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 40px rgba(46,204,113,0.6), 0 0 80px rgba(46,204,113,0.3);
+            animation: countdown-pop 0.5s ease-out;
+        }
+        @keyframes countdown-pop {
+            0% { transform: scale(2); opacity: 0; }
+            60% { transform: scale(0.9); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
         }
     </style>
 </head>
@@ -240,10 +268,14 @@ export const snakeGameHtml = `
         </div>
         <button onclick="startGame()">START GAME</button>
     </div>
+    <div id="countdown"><span id="countdown-text"></span></div>
     <div id="message">
         <h2 id="msg-title">Round Complete!</h2>
         <p id="msg-text">Get ready for the next round</p>
-        <button onclick="nextAction()">Continue</button>
+        <div id="msg-buttons">
+            <button id="msg-play-btn" onclick="nextAction()">Continue</button>
+            <button id="msg-home-btn" onclick="goHome()">Go Home</button>
+        </div>
     </div>
 
     <script>
@@ -260,6 +292,7 @@ export const snakeGameHtml = `
         var coins, lives, fallingCoins, totalScore;
         var roundTimer, roundTimeLimit, timerInterval;
         var gameStarted = false;
+        var pendingCountdown = false;
         var contestConfig = null;
         var sessionStartTime = null;
 
@@ -355,6 +388,7 @@ export const snakeGameHtml = `
             fallingCoins = [];
             tickCount = 0;
             inputLog = [];
+            pendingCountdown = true;
             sessionStartTime = new Date().toISOString();
             postSessionMessage('SESSION_START', { startTime: sessionStartTime, rows: CONTEST_ROWS });
             // In contest/embedded mode, wait for SESSION_SEED before starting
@@ -363,7 +397,7 @@ export const snakeGameHtml = `
                 return;
             }
             rng = Math.random;
-            startRound();
+            showCountdown(startRound);
         }
 
         function startRound() {
@@ -428,7 +462,7 @@ export const snakeGameHtml = `
                 sessionId: sessionId,
                 inputs: inputLog
             });
-            showMessage("Time's Up!", 'Score: ' + finalScore + ' • Round ' + round, 'Try Again');
+            showMessage("Time's Up!", 'Score: ' + finalScore + ' • Round ' + round, 'Try Again', true);
         }
 
         function startGameLoop() {
@@ -458,6 +492,7 @@ export const snakeGameHtml = `
                 for (var j = 0; j < length; j++) {
                     var bx = isHorizontal ? startX + j : startX;
                     var by = isHorizontal ? startY : startY + j;
+                    if (by === snakeStartY) continue;
                     if (Math.abs(bx - snakeStartX) > 5 || Math.abs(by - snakeStartY) > 3) {
                         b.push({ x: bx, y: by });
                     }
@@ -849,7 +884,7 @@ export const snakeGameHtml = `
             totalScore += snake.length;
             clearInterval(gameLoop);
             clearInterval(timerInterval);
-            showMessage('Round ' + round + ' Complete!', 'Score: ' + totalScore + ' • Length: ' + snake.length, 'Next Round →');
+            showMessage('Round ' + round + ' Complete!', 'Score: ' + totalScore + ' • Length: ' + snake.length, 'Next Round →', false);
         }
 
         function endGame() {
@@ -872,7 +907,7 @@ export const snakeGameHtml = `
                 sessionId: sessionId,
                 inputs: inputLog
             });
-            showMessage('Game Over!', 'Score: ' + finalScore + ' • Round ' + round, 'Play Again');
+            showMessage('Game Over!', 'Score: ' + finalScore + ' • Round ' + round, 'Play Again', true);
         }
 
         function respawn() {
@@ -888,11 +923,42 @@ export const snakeGameHtml = `
             updateUI();
         }
 
-        function showMessage(title, text, btnText) {
+        function showMessage(title, text, btnText, showHome) {
             document.getElementById('msg-title').textContent = title;
             document.getElementById('msg-text').textContent = text;
-            document.getElementById('message').querySelector('button').textContent = btnText;
+            document.getElementById('msg-play-btn').textContent = btnText;
+            document.getElementById('msg-home-btn').style.display = showHome ? 'inline-block' : 'none';
             document.getElementById('message').style.display = 'block';
+        }
+
+        function goHome() {
+            postSessionMessage('NAVIGATE_BACK', {});
+        }
+
+        function showCountdown(callback) {
+            var el = document.getElementById('countdown');
+            var textEl = document.getElementById('countdown-text');
+            var steps = ['3', '2', '1', 'GO!'];
+            var i = 0;
+            el.style.display = 'flex';
+            textEl.textContent = steps[0];
+            // Re-trigger animation
+            textEl.style.animation = 'none';
+            textEl.offsetHeight;
+            textEl.style.animation = '';
+            var interval = setInterval(function() {
+                i++;
+                if (i < steps.length) {
+                    textEl.textContent = steps[i];
+                    textEl.style.animation = 'none';
+                    textEl.offsetHeight;
+                    textEl.style.animation = '';
+                } else {
+                    clearInterval(interval);
+                    el.style.display = 'none';
+                    callback();
+                }
+            }, 750);
         }
 
         function nextAction() {
@@ -910,24 +976,70 @@ export const snakeGameHtml = `
                 fallingCoins = [];
                 tickCount = 0;
                 inputLog = [];
+                pendingCountdown = true;
                 sessionStartTime = new Date().toISOString();
                 postSessionMessage('SESSION_START', { startTime: sessionStartTime, rows: CONTEST_ROWS });
                 // Wait for new SESSION_SEED before starting if in contest/embedded mode
                 if (contestConfig || isEmbedded) return;
+                // Non-contest mode: start countdown immediately
+                showCountdown(startRound);
+                return;
             } else {
                 round++;
             }
             startRound();
         }
 
+        // Shared direction helper used by touch and keyboard
+        var lastApplyTime = 0;
+        function applyDirection(newDir) {
+            nextDirection = newDir;
+            inputLog.push({ tick: tickCount, dx: newDir.x, dy: newDir.y });
+            update();
+            // Only restart the game loop timer if enough time has passed
+            // to avoid churn from rapid touchmove events
+            var now = Date.now();
+            if (now - lastApplyTime >= gameSpeed) {
+                startGameLoop();
+            }
+            lastApplyTime = now;
+        }
+
         // Touch controls
-        var touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+        var touchRefX = 0, touchRefY = 0;
 
         canvas.addEventListener('touchstart', function(e) {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-            touchStartTime = Date.now();
+            touchRefX = e.touches[0].clientX;
+            touchRefY = e.touches[0].clientY;
             e.preventDefault();
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+            if (!gameStarted || gameOver || roundComplete) return;
+            var tx = e.touches[0].clientX;
+            var ty = e.touches[0].clientY;
+            var dx = tx - touchRefX;
+            var dy = ty - touchRefY;
+            var absDx = Math.abs(dx);
+            var absDy = Math.abs(dy);
+            var dist = Math.max(absDx, absDy);
+            if (dist < 15) return;
+            // Require 1.3x dominance in one axis for clear direction
+            var newDir = null;
+            if (absDx > absDy * 1.3) {
+                if (dx > 0 && direction.x !== -1) newDir = {x: 1, y: 0};
+                else if (dx < 0 && direction.x !== 1) newDir = {x: -1, y: 0};
+            } else if (absDy > absDx * 1.3) {
+                if (dy > 0 && direction.y !== -1) newDir = {x: 0, y: 1};
+                else if (dy < 0 && direction.y !== 1) newDir = {x: 0, y: -1};
+            }
+            if (newDir) {
+                applyDirection(newDir);
+                // Reset reference point so next segment of gesture is measured from here
+                touchRefX = tx;
+                touchRefY = ty;
+            }
         }, { passive: false });
 
         canvas.addEventListener('touchend', function(e) {
@@ -935,27 +1047,6 @@ export const snakeGameHtml = `
             if (roundComplete || gameOver) {
                 nextAction();
                 return;
-            }
-            if (!gameStarted) return;
-            var dx = e.changedTouches[0].clientX - touchStartX;
-            var dy = e.changedTouches[0].clientY - touchStartY;
-            var duration = Date.now() - touchStartTime;
-
-            if (duration < 400 && (Math.abs(dx) > 20 || Math.abs(dy) > 20)) {
-                var newDir = null;
-                if (Math.abs(dx) > Math.abs(dy)) {
-                    if (dx > 0 && direction.x !== -1) newDir = {x: 1, y: 0};
-                    else if (dx < 0 && direction.x !== 1) newDir = {x: -1, y: 0};
-                } else {
-                    if (dy > 0 && direction.y !== -1) newDir = {x: 0, y: 1};
-                    else if (dy < 0 && direction.y !== 1) newDir = {x: 0, y: -1};
-                }
-                if (newDir) {
-                    nextDirection = newDir;
-                    inputLog.push({ tick: tickCount, dx: newDir.x, dy: newDir.y });
-                    update();
-                    startGameLoop();
-                }
             }
         }, { passive: false });
 
@@ -973,10 +1064,7 @@ export const snakeGameHtml = `
             if (e.key === 'ArrowLeft' && direction.x !== 1) newDir = {x: -1, y: 0};
             if (e.key === 'ArrowRight' && direction.x !== -1) newDir = {x: 1, y: 0};
             if (newDir) {
-                nextDirection = newDir;
-                inputLog.push({ tick: tickCount, dx: newDir.x, dy: newDir.y });
-                update();
-                startGameLoop();
+                applyDirection(newDir);
             }
             e.preventDefault();
         });
@@ -1016,7 +1104,12 @@ export const snakeGameHtml = `
                 // Start the round if game is waiting for seed
                 if (waitingForSeed || (gameStarted && gameOver)) {
                     waitingForSeed = false;
-                    startRound();
+                    if (pendingCountdown) {
+                        pendingCountdown = false;
+                        showCountdown(startRound);
+                    } else {
+                        startRound();
+                    }
                 }
             }
         });

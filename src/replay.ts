@@ -94,6 +94,7 @@ export function replaySnakeGame({
       for (let j = 0; j < length; j++) {
         const bx = isHorizontal ? startX + j : startX;
         const by = isHorizontal ? startY : startY + j;
+        if (by === snakeStartY) continue;
         if (
           Math.abs(bx - snakeStartX) > 5 ||
           Math.abs(by - snakeStartY) > 3
