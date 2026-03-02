@@ -1251,18 +1251,14 @@ var snakeGameHtml = `
         }
 
         // Shared direction helper used by touch and keyboard
-        var lastApplyTime = 0;
         function applyDirection(newDir) {
+            // Skip if direction hasn't changed \u2014 prevents straight-line
+            // swipes from calling update() repeatedly and speeding up the snake
+            if (newDir.x === nextDirection.x && newDir.y === nextDirection.y) return;
             nextDirection = newDir;
             inputLog.push({ tick: tickCount, dx: newDir.x, dy: newDir.y });
             update();
-            // Only restart the game loop timer if enough time has passed
-            // to avoid churn from rapid touchmove events
-            var now = Date.now();
-            if (now - lastApplyTime >= gameSpeed) {
-                startGameLoop();
-            }
-            lastApplyTime = now;
+            startGameLoop();
         }
 
         // Touch controls
